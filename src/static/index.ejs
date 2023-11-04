@@ -92,11 +92,11 @@
                 query += `&timestamp=${timestamp}`;
             }
             query+=`&searchBy=${searchBy}`;
-            console.log(query);
 
             fetch(query)
                 .then((response) => response.json())
                 .then((data) => {
+                    console.log(data);
                     resultTableBody.innerHTML = createTable(data);
                 })
                 .catch((error) => {
@@ -110,14 +110,7 @@
             const searchBy = document.getElementById('searchBy').value;
            var parts; 
             for (const key in data) {
-                if(searchBy == "bylevel"){
-
-                parts = key.split(' ');
-                }
-                else{
-
                 parts = data[key].split(' ');
-                }
             if (parts.length >= 3) {
                 const timestamp = parts[0] + ' ' + parts[1];
                 const logLevel = parts[2].slice(0, -1);

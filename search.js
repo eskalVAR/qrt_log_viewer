@@ -20,12 +20,14 @@ app.get('/logs', async (req, res) => {
   const { logFileName, logLevel, message, timestamp, searchBy } = req.query;
   let key;
   let query;
+  let deli = 1;
   if (searchBy === 'bymessage') {
     key = `${logFileName}_bymessage`;
     query = message;
   } else if (searchBy === 'bylevel') {
     key = `${logFileName}_bylevel:${logLevel}`;
     query = "*";
+    deli = 0;
   } else if (searchBy === 'bytimestamp') {
     key = `${logFileName}_bytimestamp`;
     query = timestamp;
@@ -35,11 +37,6 @@ app.get('/logs', async (req, res) => {
   }
   console.log(key);
   console.log(query);
-  if(searchBy == 'bylevel')
-  {
-
-  }
-  else{
 
   
   const allresults = [];
@@ -48,7 +45,8 @@ app.get('/logs', async (req, res) => {
     return new Promise(async (resolve, reject) => {
       try {
         const [nextCursor, results] = await redisClient.hscan(key, cursor, 'MATCH', query, 'COUNT', '100');
-        const filteredResults = results.filter((_, index) => index % 2 === 1);
+
+        const filteredResults = results.filter((_, index) => index % 2 === deli);
       allresults.push(...filteredResults);
   
         if (nextCursor === '0') {
@@ -74,7 +72,6 @@ app.get('/logs', async (req, res) => {
         console.log(error);
       res.status(500).json({ error: 'An error occurred' });
     });
-}
 });
 
 app.listen(port, () => {
