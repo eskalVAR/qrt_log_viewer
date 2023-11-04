@@ -46,6 +46,13 @@
         <label for="timestamp">Timestamp:</label>
         <input type="text" name="timestamp" id="timestamp" placeholder="Timestamp">
         <br>
+        <label for="searchBy">Search By:</label>
+        <select name="searchBy" id="searchBy">
+            <option value="bymessage">By Message</option>
+            <option value="bylevel">By Level</option>
+            <option value="bytimestamp">By Timestamp</option>
+        </select>
+        <br>
         <button type="button" onclick="queryLogs()">Query</button>
     </form>
     <table>
@@ -67,6 +74,7 @@
             const logLevel = document.getElementById('logLevel').value;
             const message = document.getElementById('message').value;
             const timestamp = document.getElementById('timestamp').value;
+            const searchBy = document.getElementById('searchBy').value;
             const resultDiv = document.getElementById('result');
             const resultTableBody = document.getElementById('result');
             let query = '/logs?';
@@ -83,12 +91,12 @@
             } else if (timestamp) {
                 query += `&timestamp=${timestamp}`;
             }
+            query+=`&searchBy=${searchBy}`;
             console.log(query);
 
             fetch(query)
                 .then((response) => response.json())
                 .then((data) => {
-                    console.log(data)
                     resultTableBody.innerHTML = createTable(data);
                 })
                 .catch((error) => {
@@ -98,8 +106,18 @@
 
         function createTable(data) {
             let tableHtml = '';
+            
+            const searchBy = document.getElementById('searchBy').value;
+           var parts; 
             for (const key in data) {
-            const parts = key.split(' ');
+                if(searchBy == "bylevel"){
+
+                parts = key.split(' ');
+                }
+                else{
+
+                parts = data[key].split(' ');
+                }
             if (parts.length >= 3) {
                 const timestamp = parts[0] + ' ' + parts[1];
                 const logLevel = parts[2].slice(0, -1);
