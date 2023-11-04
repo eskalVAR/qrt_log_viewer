@@ -21,7 +21,7 @@ function processLogEntry(logEntry, logFileName) {
 
   redisClient.hset(`${logFileName}_bytimestamp`, timestamp, logEntry);
   redisClient.hset(`${logFileName}_bylevel:` + logLevel, logEntry, message);
-  redisClient.hset(`${logFileName}_bymessage:`, message + ' ' + timestamp, logEntry );
+  redisClient.hset(`${logFileName}_bymessage`, message + ' ' + timestamp, logEntry );
 
 }
 const summaryStatsMap = {};

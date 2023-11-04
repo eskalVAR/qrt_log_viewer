@@ -18,47 +18,63 @@ redisClient.on('error', (err) => {
 // Set up routes for querying the logs
 app.get('/logs', async (req, res) => {
   const { logFileName, logLevel, message, timestamp, searchBy } = req.query;
+  let key;
   let query;
   if (searchBy === 'bymessage') {
-    query = `${logFileName}_bymessage`;
+    key = `${logFileName}_bymessage`;
+    query = message;
   } else if (searchBy === 'bylevel') {
-    query = `${logFileName}_bylevel:${logLevel}`;
+    key = `${logFileName}_bylevel:${logLevel}`;
+    query = "*";
   } else if (searchBy === 'bytimestamp') {
-    query = `${logFileName}_bytimestamp`;
+    key = `${logFileName}_bytimestamp`;
+    query = timestamp;
   } else {
     res.status(400).json({ error: 'Invalid searchBy parameter' });
     return;
   }
-  console.log(query)
+  console.log(key);
+  console.log(query);
+  if(searchBy == 'bylevel')
+  {
 
-    // Use HSCAN to iterate through the hash and retrieve log entries
-  const result = {};
+  }
+  else{
 
-  const scanLogEntries = async (cursor) => {
-    const [nextCursor, keys] = await new Promise((resolve, reject) => {
-      redisClient.hscan(query, cursor, 'MATCH', '*', 'COUNT', '100', (err, result) => {
-        if (err) {
-          reject(err);
+  
+  const allresults = [];
+
+  function scan(key, query, cursor = '0') {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const [nextCursor, results] = await redisClient.hscan(key, cursor, 'MATCH', query, 'COUNT', '100');
+        const filteredResults = results.filter((_, index) => index % 2 === 1);
+      allresults.push(...filteredResults);
+  
+        if (nextCursor === '0') {
+          resolve(allresults);
         } else {
-          resolve(result);
+          resolve(scan(key, query, nextCursor));
         }
-      });
+      } catch (error) {
+        reject(error);
+        console.log(error);
+      }
     });
-
-    for (let i = 0; i < keys.length; i += 2) {
-      const key = keys[i];
-      const logEntry = keys[i + 1];
-      result[key] = logEntry;
-    }
-
-    if (nextCursor === '0') {
-      res.json(result);
-    } else {
-      scanLogEntries(nextCursor);
-    }
-  };
-
-  scanLogEntries('0');
+  }
+  
+  scan(key, query)
+    .then(results => {
+        for(var i = 0; i < results.length; i++){
+            results.splice(i+1,2);
+        }
+      res.json(results);
+    })
+    .catch(error => {
+        console.log(error);
+      res.status(500).json({ error: 'An error occurred' });
+    });
+}
 });
 
 app.listen(port, () => {
@@ -66,7 +82,7 @@ app.listen(port, () => {
 });
 
 app.get('/', (req, res) => {
-    redisClient.keys('*_bytimestamp', (err, keys) => {
+   redisClient.keys('*_bytimestamp', (err, keys) => {
       if (err) {
         console.error('Redis Error: ' + err);
         res.status(500).send('Internal Server Error');
