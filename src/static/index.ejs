@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Query</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        input, button {
+            margin: 10px;
+        }
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Log Query</h1>
+    <form>
+        <label for="logFileName">Select Log File:</label>
+        <select name="logFileName" id="logFileName">
+            <option value="">Select Log File</option>
+            <% for (let i = 0; i < logFileNames.length; i++) { %>
+                <option value="<%= logFileNames[i] %>"><%= logFileNames[i] %></option>
+            <% } %>
+        </select>
+        <br>
+        <label for="logLevel">Log Level:</label>
+        <input type="text" name="logLevel" id="logLevel" placeholder="Log Level">
+        <br>
+        <label for="message">Message:</label>
+        <input type="text" name="message" id="message" placeholder="Message">
+        <br>
+        <label for="timestamp">Timestamp:</label>
+        <input type="text" name="timestamp" id="timestamp" placeholder="Timestamp">
+        <br>
+        <button type="button" onclick="queryLogs()">Query</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        function queryLogs() {
+            const logFileName = document.getElementById('logFileName').value;
+            const logLevel = document.getElementById('logLevel').value;
+            const message = document.getElementById('message').value;
+            const timestamp = document.getElementById('timestamp').value;
+            const resultDiv = document.getElementById('result');
+
+            let query = '/logs?';
+            if (logFileName) {
+                query += `logFileName=${logFileName}`;
+            } else {
+                resultDiv.innerHTML = 'Please select a Log File';
+                return;
+            }
+            if (logLevel) {
+                query += `&logLevel=${logLevel}`;
+            } else if (message) {
+                query += `&message=${message}&timestamp=${timestamp}`;
+            } else if (timestamp) {
+                query += `&timestamp=${timestamp}`;
+            }
+            console.log(query);
+            fetch(query)
+                .then((response) => response.json())
+                .then((data) => {
+                    resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                })
+                .catch((error) => {
+                    resultDiv.innerHTML = 'Error: ' + error;
+                });
+        }
+    </script>
+</body>
+</html>

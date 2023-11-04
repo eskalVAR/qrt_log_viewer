@@ -2,57 +2,100 @@ const fs = require('fs');
 const readline = require('readline');
 const redis = require('redis');
 
-// Configure Redis connection
+const logFiles = ['sample1.log', 'sample2.log']
 const redisClient = redis.createClient({
-  host: 'localhost', // Update with your Redis server details
-  port: 6379, // Update with your Redis server port
+  host: 'localhost',
+  port: 6379,
 });
 
-// File to monitor
-const logFilePath = './sample.log'; // Replace with your log file path
+function processLogEntry(logEntry, logFileName) {
+  const logParts = logEntry.split(' ');
+  if (logParts.length < 4) {
+    return;
+  }
 
-// Create a Redis key for storing the log data
-const redisKey = 'log_data';
+  const timestamp = logParts[0] + ' ' + logParts[1];
+  const logLevel = logParts[2].slice(0, -1);
+  const message = logParts.slice(3).join(' ');
+  const redisKey = `${timestamp}:${logLevel}:${logFileName}`;
 
-// Function to process a log line and store it in Redis
-function processLogLine(line) {
-  const parts = line.split(' ');
-  const timestamp = parts[0] + ' ' + parts[1];
-  const logLevel = parts[2].slice(0, -1);
-  const logMessage = parts.slice(3).join(' ');
+  redisClient.hset(`${logFileName}_bytimestamp`, timestamp, logEntry);
+  redisClient.hset(`${logFileName}_bylevel:` + logLevel, logEntry, message);
+  redisClient.hset(`${logFileName}_bymessage:`, message + ' ' + timestamp, logEntry );
 
-  // Store the log data in Redis with a unique timestamp as the key
-  redisClient.hset(redisKey, timestamp, JSON.stringify({ logLevel, logMessage }), (err) => {
-    if (err) {
-      console.error('Error storing log data in Redis:', err);
+}
+const summaryStatsMap = {};
+
+function processSummaryStatsEntry(logEntry, logFilePath) {
+  // Identify and process summary statistics entries per log file
+  if (logEntry.includes('Exchange order message timing output')) {
+    if (!summaryStatsMap[logFilePath]) {
+      summaryStatsMap[logFilePath] = [];
     }
+    const summaryStats = {};
+    let isSummaryStats = true;
+
+    for (const line of logEntry.split('\n')) {
+      if (line.trim() === '') {
+        isSummaryStats = false;
+        summaryStatsMap[logFilePath].push(summaryStats);
+      } else if (isSummaryStats) {
+        const [exchange, orderType, recvNu, xUs] = line.split(/\s+/);
+        summaryStats[exchange] = summaryStats[exchange] || {};
+        summaryStats[exchange][orderType] = { recvNu, xUs };
+      }
+    }
+
+    // Store the summary statistics in Redis
+    redisClient.set(`summary_stats_${logFilePath}`, JSON.stringify(summaryStatsMap[logFilePath]), (err) => {
+      if (err) {
+        console.error(`Error storing summary stats in Redis: ${err}`);
+      } else {
+        console.log(`Stored summary stats in Redis for ${logFilePath}`);
+      }
+    });
+  }
+}
+
+
+function processLogFile(logFilePath) {
+  const fileStream = fs.createReadStream(logFilePath);
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity,
+  });
+
+  let isSummaryStats = false;
+  let summaryStats = {};
+
+  rl.on('line', (line) => {
+    if (line.includes('Exchange order message timing output')) {
+      //processSummaryStatsEntry(line, logFilePath);
+      isSummaryStats = true;
+      summaryStats = {};
+    } else if (isSummaryStats) {
+      //processSummaryStatsEntry(line, logFilePath);
+      if (line.trim() === '') {
+        isSummaryStats = false;
+        }
+    } else {
+      processLogEntry(line, logFilePath);
+    }
+  });
+
+  rl.on('error', (err) => {
+    console.error(`Error reading log file ${logFilePath}: ${err}`);
   });
 }
 
-// Create a read stream to monitor the log file
-const fileStream = fs.createReadStream(logFilePath);
+logFiles.forEach((logFilePath) => {
+  processLogFile(logFilePath);
 
-// Create a readline interface to read lines from the file
-const rl = readline.createInterface({
-  input: fileStream,
-  crlfDelay: Infinity,
+  // Watch for changes in the log file
+  fs.watch(logFilePath, (event, filename) => {
+    if (event === 'change') {
+      processLogFile(logFilePath);
+    }
+  });
 });
 
-rl.on('line', (line) => {
-  console.log("Line");
-  processLogLine(line);
-});
-
-rl.on('close', () => {
-  console.log('Log file monitoring ended.');
-});
-
-// Handle errors
-rl.on('error', (err) => {
-  console.error('Error reading log file:', err);
-});
-
-// Handle Redis errors
-redisClient.on('error', (err) => {
-  console.error('Redis error:', err);
-});
