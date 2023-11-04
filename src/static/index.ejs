@@ -12,6 +12,18 @@
         #result {
             margin-top: 20px;
         }
+        table {
+            border-collapse: collapse;
+            width: 80%;
+        }
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
@@ -36,7 +48,18 @@
         <br>
         <button type="button" onclick="queryLogs()">Query</button>
     </form>
-    <div id="result"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Log Level</th>
+                <th>Message</th>
+            </tr>
+        </thead>
+        <tbody id="result">
+            <!-- This section will be populated with query results -->
+        </tbody>
+    </table>
 
     <script>
         function queryLogs() {
@@ -45,7 +68,7 @@
             const message = document.getElementById('message').value;
             const timestamp = document.getElementById('timestamp').value;
             const resultDiv = document.getElementById('result');
-
+            const resultTableBody = document.getElementById('result');
             let query = '/logs?';
             if (logFileName) {
                 query += `logFileName=${logFileName}`;
@@ -61,14 +84,35 @@
                 query += `&timestamp=${timestamp}`;
             }
             console.log(query);
+
             fetch(query)
                 .then((response) => response.json())
                 .then((data) => {
-                    resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                    console.log(data)
+                    resultTableBody.innerHTML = createTable(data);
                 })
                 .catch((error) => {
-                    resultDiv.innerHTML = 'Error: ' + error;
+                    resultTableBody.innerHTML = 'Error: ' + error;
                 });
+        }
+
+        function createTable(data) {
+            let tableHtml = '';
+            for (const key in data) {
+            const parts = key.split(' ');
+            if (parts.length >= 3) {
+                const timestamp = parts[0] + ' ' + parts[1];
+                const logLevel = parts[2].slice(0, -1);
+                const message = parts.slice(3).join(' ');
+
+                tableHtml += '<tr>';
+                tableHtml += `<td>${timestamp}</td>`;
+                tableHtml += `<td>${logLevel}</td>`;
+                tableHtml += `<td>${message}</td>`;
+                tableHtml += '</tr>';
+            }
+        }
+        return tableHtml;
         }
     </script>
 </body>
