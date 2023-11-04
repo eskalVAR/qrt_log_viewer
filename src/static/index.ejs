@@ -52,6 +52,13 @@
             <option value="bytimestamp">By Timestamp</option>
         </select>
         <br>
+        <label for="continuousRefresh">Continuous Refresh:</label>
+        <input type="checkbox" name="continuousRefresh" id="continuousRefresh">
+        <br>
+        <label for="updateInterval">Update Interval (in seconds):</label>
+        <input type="range" name="updateInterval" id="updateInterval" min="1" max="60" step="1" value="5">
+        <output for="updateInterval">5 seconds</output>
+        <br>
         <button type="button" onclick="queryLogs()">Query</button>
     </form>
     <table>
@@ -69,12 +76,20 @@
     </table>
 
     <script>
-        async function queryLogs() {
+        let continuousRefreshInterval;
+
+        function queryLogs() {
+            clearInterval(continuousRefreshInterval);
+
             const logFileCheckboxes = document.querySelectorAll('input[name="logFile"]:checked');
             const logLevel = document.getElementById('logLevel').value;
             const message = document.getElementById('message').value;
             const timestamp = document.getElementById('timestamp').value;
             const searchBy = document.getElementById('searchBy').value;
+            const continuousRefreshCheckbox = document.getElementById('continuousRefresh');
+            const updateInterval = document.getElementById('updateInterval').value;
+            const updateIntervalOutput = document.querySelector('output[for="updateInterval"]');
+            updateIntervalOutput.textContent = `${updateInterval} seconds`;
             const resultTableBody = document.getElementById('result');
 
             if (logFileCheckboxes.length === 0) {
@@ -112,17 +127,33 @@
                     });
             });
 
-            const results = await Promise.all(requests);
+            const refreshResults = () => {
+                Promise.all(requests)
+                    .then(results => {
+                        resultTableBody.innerHTML = '';
+                        results.forEach(({ logFileName, data, error }) => {
+                            if (error) {
+                                resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
+                            } else {
+                                resultTableBody.innerHTML += createTable(data, logFileName);
+                            }
+                        });
+                    });
+            };
 
-            resultTableBody.innerHTML = '';
-            results.forEach(({ logFileName, data, error }) => {
-                if (error) {
-                    resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
-                } else {
-                    resultTableBody.innerHTML += createTable(data, logFileName);
-                }
-            });
+            refreshResults();
+
+            if (continuousRefreshCheckbox.checked) {
+                continuousRefreshInterval = setInterval(refreshResults, updateInterval * 1000); // Convert seconds to milliseconds
+            }
         }
+
+        const updateIntervalSlider = document.getElementById('updateInterval');
+        const updateIntervalOutput = document.querySelector('output[for="updateInterval"]');
+
+        updateIntervalSlider.addEventListener('input', () => {
+            updateIntervalOutput.textContent = `${updateIntervalSlider.value} seconds`;
+        });
 
         function createTable(data, logFileName) {
             let tableHtml = '';
