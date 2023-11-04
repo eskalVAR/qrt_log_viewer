@@ -1,8 +1,9 @@
 const fs = require('fs');
 const readline = require('readline');
+const path = require('path');
 const redis = require('redis');
+const logDirectory = './logs'; // Specify the directory where your log files are stored
 
-const logFiles = ['sample1.log', 'sample2.log']
 const redisClient = redis.createClient({
   host: 'localhost',
   port: 6379,
@@ -88,7 +89,33 @@ function processLogFile(logFilePath) {
   });
 }
 
-logFiles.forEach((logFilePath) => {
+const watchedFiles = new Set();
+
+fs.readdir(logDirectory, (err, files) => {
+  if (err) {
+    console.error(`Error reading log directory: ${err}`);
+    return;
+  }
+
+  const logFiles = files.filter((file) => path.extname(file) === '.log');
+
+  logFiles.forEach((logFile) => {
+    const logFilePath = path.join(logDirectory, logFile);
+    setupFileWatcher(logFilePath);
+  });
+});
+
+fs.watch(logDirectory, (event, filename) => {
+  if (event === 'rename' && path.extname(filename) === '.log') {
+    const logFilePath = path.join(logDirectory, filename);
+    if (!watchedFiles.has(logFilePath)) {
+      setupFileWatcher(logFilePath);
+    }
+  }
+});
+
+function setupFileWatcher(logFilePath) {
+  watchedFiles.add(logFilePath);
   processLogFile(logFilePath);
 
   // Watch for changes in the log file
@@ -97,5 +124,4 @@ logFiles.forEach((logFilePath) => {
       processLogFile(logFilePath);
     }
   });
-});
-
+}
