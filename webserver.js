@@ -8,7 +8,7 @@ const redisClient = redis.createClient({
   host: 'localhost',
   port: 6379,
 });
-
+var latestTime = 0;
 function processLogEntry(logEntry, logFileName) {
   const logParts = logEntry.split(' ');
   if (logParts.length < 4) {
@@ -16,48 +16,47 @@ function processLogEntry(logEntry, logFileName) {
   }
 
   const timestamp = logParts[0] + ' ' + logParts[1];
+  latestTime = timestamp;
   const logLevel = logParts[2].slice(0, -1);
   const message = logParts.slice(3).join(' ');
   const redisKey = `${timestamp}:${logLevel}:${logFileName}`;
 
   redisClient.hset(`${logFileName}_bytimestamp`, timestamp, logEntry);
   redisClient.hset(`${logFileName}_bylevel:` + logLevel, logEntry, message);
-  redisClient.hset(`${logFileName}_bymessage`, message + ' ' + timestamp, logEntry );
-
+  redisClient.hset(`${logFileName}_bymessage`, message + ' ' + timestamp, logEntry);
 }
-const summaryStatsMap = {};
 
+
+var summaryStats = {};
+var summaryStatsMap = {};
+var sumindex=0;
 function processSummaryStatsEntry(logEntry, logFilePath) {
-  // Identify and process summary statistics entries per log file
-  if (logEntry.includes('Exchange order message timing output')) {
     if (!summaryStatsMap[logFilePath]) {
       summaryStatsMap[logFilePath] = [];
     }
-    const summaryStats = {};
     let isSummaryStats = true;
 
-    for (const line of logEntry.split('\n')) {
-      if (line.trim() === '') {
+      if (logEntry.trim() === '') {
         isSummaryStats = false;
+        sumindex=0;
         summaryStatsMap[logFilePath].push(summaryStats);
       } else if (isSummaryStats) {
-        const [exchange, orderType, recvNu, xUs] = line.split(/\s+/);
-        summaryStats[exchange] = summaryStats[exchange] || {};
-        summaryStats[exchange][orderType] = { recvNu, xUs };
+        const [blank,exchange, orderType, recvNu, xUs] = logEntry.split(/\s+/);
+        if (exchange.trim() =="Exchange"){
+          return;
+        }
+        summaryStats[sumindex] = {
+          exchange : exchange,
+          order : orderType,
+          recvnu : recvNu,
+          xUs : xUs,
+          time: latestTime
+        }
+        redisClient.zadd(`${logFilePath}_exchange_timing_output`, parseFloat(sumindex)  ,JSON.stringify(summaryStats[sumindex]));
+        sumindex++;
       }
-    }
 
-    // Store the summary statistics in Redis
-    redisClient.set(`summary_stats_${logFilePath}`, JSON.stringify(summaryStatsMap[logFilePath]), (err) => {
-      if (err) {
-        console.error(`Error storing summary stats in Redis: ${err}`);
-      } else {
-        console.log(`Stored summary stats in Redis for ${logFilePath}`);
-      }
-    });
-  }
 }
-
 
 function processLogFile(logFilePath) {
   const fileStream = fs.createReadStream(logFilePath);
@@ -71,14 +70,14 @@ function processLogFile(logFilePath) {
 
   rl.on('line', (line) => {
     if (line.includes('Exchange order message timing output')) {
-      //processSummaryStatsEntry(line, logFilePath);
       isSummaryStats = true;
       summaryStats = {};
     } else if (isSummaryStats) {
-      //processSummaryStatsEntry(line, logFilePath);
       if (line.trim() === '') {
         isSummaryStats = false;
-        }
+      }
+      // Process the summary stats entry
+      processSummaryStatsEntry(line, logFilePath);
     } else {
       processLogEntry(line, logFilePath);
     }
