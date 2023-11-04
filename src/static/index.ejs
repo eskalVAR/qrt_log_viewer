@@ -58,6 +58,7 @@
     <table>
         <thead>
             <tr>
+                <th>Log</th>
                 <th>Timestamp</th>
                 <th>Log Level</th>
                 <th>Message</th>
@@ -97,14 +98,14 @@
                 .then((response) => response.json())
                 .then((data) => {
                     console.log(data);
-                    resultTableBody.innerHTML = createTable(data);
+                    resultTableBody.innerHTML = createTable(data, logFileName);
                 })
                 .catch((error) => {
                     resultTableBody.innerHTML = 'Error: ' + error;
                 });
         }
 
-        function createTable(data) {
+        function createTable(data, logFileName) {
             let tableHtml = '';
             
             const searchBy = document.getElementById('searchBy').value;
@@ -117,6 +118,7 @@
                 const message = parts.slice(3).join(' ');
 
                 tableHtml += '<tr>';
+                tableHtml += `<td>${logFileName}</td>`;
                 tableHtml += `<td>${timestamp}</td>`;
                 tableHtml += `<td>${logLevel}</td>`;
                 tableHtml += `<td>${message}</td>`;
