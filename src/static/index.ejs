@@ -25,6 +25,8 @@
             background-color: #f2f2f2;
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 </head>
 <body>
     <h1>Log Query</h1>
@@ -74,6 +76,67 @@
             <!-- This section will be populated with query results -->
         </tbody>
     </table>
+        
+    <div id="logFilesContainer">
+        <!-- Log files will be dynamically updated here -->
+    </div>
+    
+    <script>
+        // Function to fetch and update log files
+        function updateLogFiles() {
+          // Make an AJAX GET request to the server to fetch the updated logFileNames
+          fetch('/logFiles')
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json(); // Parse the response as JSON
+            })
+            .then((data) => {
+              const logFilesContainer = document.getElementById('logFilesContainer');
+              const existingCheckboxes = logFilesContainer.querySelectorAll('input[type="checkbox"]');
+      
+              // Create a map of existing checkbox states
+              const checkboxStates = new Map();
+              existingCheckboxes.forEach((checkbox) => {
+                checkboxStates.set(checkbox.value, checkbox.checked);
+              });
+      
+              // Clear the existing content
+              logFilesContainer.innerHTML = '';
+      
+              data.logFileNames.forEach(function (logFileName) {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'logFile';
+                checkbox.value = logFileName;
+      
+                const label = document.createElement('label');
+                label.htmlFor = 'logFile';
+                label.textContent = logFileName;
+      
+                // Restore the checkbox state if it exists in the map
+                if (checkboxStates.has(logFileName)) {
+                  checkbox.checked = checkboxStates.get(logFileName);
+                }
+      
+                logFilesContainer.appendChild(checkbox);
+                logFilesContainer.appendChild(label);
+                logFilesContainer.appendChild(document.createElement('br'));
+              });
+            })
+            .catch((error) => {
+              console.error('Error fetching log files: ', error);
+            });
+        }
+      
+        // Update log files initially and then periodically every X milliseconds
+        updateLogFiles(); // Initial update
+      
+        // Periodically update log files every 5 seconds (you can adjust the interval)
+        const updateInterval = 5000; // 5 seconds
+        setInterval(updateLogFiles, updateInterval);
+      </script>
 
     <script>
         let continuousRefreshInterval;

@@ -79,21 +79,33 @@ app.listen(port, () => {
 });
 
 app.get('/', (req, res) => {
-   redisClient.keys('*_bytimestamp', (err, keys) => {
+  redisClient.keys('*_bytimestamp', (err, keys) => {
       if (err) {
-        console.error('Redis Error: ' + err);
-        res.status(500).send('Internal Server Error');
+          console.error('Redis Error: ' + err);
+          res.status(500).send('Internal Server Error');
       } else {
-        const logFileNames = keys.map((key) => key.replace('_bytimestamp', ''));
-        ejs.renderFile(__dirname + '/src/static/index.ejs', { logFileNames }, (err, html) => {
-          if (err) {
-            console.error('EJS Error: ' + err);
-            res.status(500).send('Internal Server Error');
-          } else {
-            res.send(html);
-          }
-        });
+          const logFileNames = keys.map((key) => key.replace('_bytimestamp', ''));
+          ejs.renderFile(__dirname + '/src/static/index.ejs', { logFileNames }, (err, html) => {
+              if (err) {
+                  console.error('EJS Error: ' + err);
+                  res.status(500).send('Internal Server Error');
+              } else {
+                  res.send(html);
+              }
+          });
       }
-    });
   });
-  
+});
+
+app.get('/logFiles', (req, res) => {
+  redisClient.keys('*_bytimestamp', (err, keys) => {
+    if (err) {
+      console.error('Redis Error: ' + err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      const logFileNames = keys.map((key) => key.replace('_bytimestamp', ''));
+      console.log({logFileNames})
+      res.json({ logFileNames }); // Send logFileNames as JSON
+    }
+  });
+});
