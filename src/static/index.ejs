@@ -6,7 +6,7 @@
         body {
             font-family: Arial, sans-serif;
         }
-        input, button {
+        input, button, select {
             margin: 10px;
         }
         #result {
@@ -29,14 +29,13 @@
 <body>
     <h1>Log Query</h1>
     <form>
-        <label for="logFileName">Select Log File:</label>
-        <select name="logFileName" id="logFileName">
-            <option value="">Select Log File</option>
+        <label>Select Log Files:</label>
+        <div id="logFilesContainer">
             <% for (let i = 0; i < logFileNames.length; i++) { %>
-                <option value="<%= logFileNames[i] %>"><%= logFileNames[i] %></option>
+                <input type="checkbox" name="logFile" value="<%= logFileNames[i] %>">
+                <label for="logFile"><%= logFileNames[i] %></label><br>
             <% } %>
-        </select>
-        <br>
+        </div>
         <label for="logLevel">Log Level:</label>
         <input type="text" name="logLevel" id="logLevel" placeholder="Log Level">
         <br>
@@ -70,62 +69,82 @@
     </table>
 
     <script>
-        function queryLogs() {
-            const logFileName = document.getElementById('logFileName').value;
+        async function queryLogs() {
+            const logFileCheckboxes = document.querySelectorAll('input[name="logFile"]:checked');
             const logLevel = document.getElementById('logLevel').value;
             const message = document.getElementById('message').value;
             const timestamp = document.getElementById('timestamp').value;
             const searchBy = document.getElementById('searchBy').value;
-            const resultDiv = document.getElementById('result');
             const resultTableBody = document.getElementById('result');
-            let query = '/logs?';
-            if (logFileName) {
-                query += `logFileName=${logFileName}`;
-            } else {
-                resultDiv.innerHTML = 'Please select a Log File';
+
+            if (logFileCheckboxes.length === 0) {
+                resultTableBody.innerHTML = 'Please select at least one Log File';
                 return;
             }
-            if (logLevel) {
-                query += `&logLevel=${logLevel}`;
-            } else if (message) {
-                query += `&message=${message}&timestamp=${timestamp}`;
-            } else if (timestamp) {
-                query += `&timestamp=${timestamp}`;
-            }
-            query+=`&searchBy=${searchBy}`;
 
-            fetch(query)
-                .then((response) => response.json())
-                .then((data) => {
-                    console.log(data);
-                    resultTableBody.innerHTML = createTable(data, logFileName);
-                })
-                .catch((error) => {
-                    resultTableBody.innerHTML = 'Error: ' + error;
-                });
+            const requests = Array.from(logFileCheckboxes).map(checkbox => {
+                const logFileName = checkbox.value;
+                let query = '/logs?';
+
+                query += `logFileName=${logFileName}`;
+
+                if (logLevel) {
+                    query += `&logLevel=${logLevel}`;
+                }
+
+                if (message) {
+                    query += `&message=${message}`;
+                }
+
+                if (timestamp) {
+                    query += `&timestamp=${timestamp}`;
+                }
+
+                query += `&searchBy=${searchBy}`;
+
+                return fetch(query)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        return { logFileName, data };
+                    })
+                    .catch((error) => {
+                        return { logFileName, error: 'Error: ' + error };
+                    });
+            });
+
+            const results = await Promise.all(requests);
+
+            resultTableBody.innerHTML = '';
+            results.forEach(({ logFileName, data, error }) => {
+                if (error) {
+                    resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
+                } else {
+                    resultTableBody.innerHTML += createTable(data, logFileName);
+                }
+            });
         }
 
         function createTable(data, logFileName) {
             let tableHtml = '';
-            
             const searchBy = document.getElementById('searchBy').value;
-           var parts; 
+            var parts;
+
             for (const key in data) {
                 parts = data[key].split(' ');
-            if (parts.length >= 3) {
-                const timestamp = parts[0] + ' ' + parts[1];
-                const logLevel = parts[2].slice(0, -1);
-                const message = parts.slice(3).join(' ');
+                if (parts.length >= 3) {
+                    const timestamp = parts[0] + ' ' + parts[1];
+                    const logLevel = parts[2].slice(0, -1);
+                    const message = parts.slice(3).join(' ');
 
-                tableHtml += '<tr>';
-                tableHtml += `<td>${logFileName}</td>`;
-                tableHtml += `<td>${timestamp}</td>`;
-                tableHtml += `<td>${logLevel}</td>`;
-                tableHtml += `<td>${message}</td>`;
-                tableHtml += '</tr>';
+                    tableHtml += '<tr>';
+                    tableHtml += `<td>${logFileName}</td>`;
+                    tableHtml += `<td>${timestamp}</td>`;
+                    tableHtml += `<td>${logLevel}</td>`;
+                    tableHtml += `<td>${message}</td>`;
+                    tableHtml += '</tr>';
+                }
             }
-        }
-        return tableHtml;
+            return tableHtml;
         }
     </script>
 </body>
