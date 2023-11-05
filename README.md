@@ -1,5 +1,9 @@
 # Durhack 2023 Entry
-This is a simple program to analyze remotely the QRT Logs as generated from the executable provided at Durhack2023
+This is a simple program to analyze remotely the QRT Logs as generated from the executable provided at Durhack2023.
+
+https://durhack.qrt.services/log-analysis/
+
+https://durhack.com/
 
 ## webserver.js 
 Connects to a Redis database and parses/indexes the data to the database and is designed to be run on the machine with logs. Logs are automatically parsed when detected or when changes are detected.
