@@ -17,7 +17,8 @@ Contains all the front-end logic for rquesting data, processing, and displaying 
 ## Install
 ``` npm install ```
 then
-``` node webserver.js``` on the log generating machine
-``` server.js ``` + Redis instance on the back-end infrastructure
+```node webserver.js``` on the log generating machine
+
+```server.js``` + Redis instance on the back-end infrastructure
 
 by default if running locally access the website through ```http://localhost:3000```
