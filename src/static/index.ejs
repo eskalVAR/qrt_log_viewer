@@ -366,7 +366,6 @@
     function createGraph(selectedGraphKey) {
       // Fetch the data from the server based on the selected graphKey
       const graphKey = selectedGraphKey || document.getElementById('graphKey').value; // Use the selectedGraphKey if provided
-      console.log("create graph")
       timelabels = [];
 
       // Include the selected graphKey in the fetch query
@@ -393,7 +392,6 @@
             doneobject[index][timedate].push(JSON.parse(value))
 
           }
-          console.log(doneobject)
           for (const [key, value] of Object.entries(doneobject[0])) {
             timelabels.push(key);
           }
