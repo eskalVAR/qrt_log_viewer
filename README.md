@@ -17,8 +17,18 @@ Contains all the front-end logic for rquesting data, processing, and displaying 
 ## Install
 ``` npm install ```
 then
-```node webserver.js``` on the log generating machine
+```node webserver.js``` on the log generating machine.
 
-```server.js``` + Redis instance on the back-end infrastructure
+```npm install``` then ```server.js``` + Redis instance on the back-end infrastructure.
 
-by default if running locally access the website through ```http://localhost:3000```
+On Arch Linux Redis can be installed from the package repo:
+
+```pacman -S redis```
+
+Then start the service:
+
+```systemctl start redis```
+
+No special Redis modules are required.
+
+By default if running locally access the front-end through ```http://localhost:3000```
