@@ -29,31 +29,31 @@ function processLogEntry(logEntry, logFileName) {
 
 var summaryStats = {};
 var summaryStatsMap = {};
-var sumindex=0;
+var sumindex = 0;
 function processSummaryStatsEntry(logEntry, logFilePath) {
-    if (!summaryStatsMap[logFilePath]) {
-      summaryStatsMap[logFilePath] = [];
-    }
-    let isSummaryStats = true;
+  if (!summaryStatsMap[logFilePath]) {
+    summaryStatsMap[logFilePath] = [];
+  }
+  let isSummaryStats = true;
 
-      if (logEntry.trim() === '') {
-        isSummaryStats = false;
-        sumindex=0;
-        summaryStatsMap[logFilePath].push(summaryStats);
-      } else if (isSummaryStats) {
-        const [blank,exchange, orderType, recvNu, xUs] = logEntry.split(/\s+/);
-        if (exchange.trim() =="Exchange"){
-          return;
-        }
-        summaryStats[sumindex] = {
-          exchange : exchange,
-          order : orderType,
-          recvnu : recvNu,
-          xUs : xUs
-        }
-        redisClient.hset(`${logFilePath}_exchange_timing_output`, latestTime + '-' + sumindex  ,JSON.stringify(summaryStats[sumindex]));
-        sumindex++;
-      }
+  if (logEntry.trim() === '') {
+    isSummaryStats = false;
+    sumindex = 0;
+    summaryStatsMap[logFilePath].push(summaryStats);
+  } else if (isSummaryStats) {
+    const [blank, exchange, orderType, recvNu, xUs] = logEntry.split(/\s+/);
+    if (exchange.trim() == "Exchange") {
+      return;
+    }
+    summaryStats[sumindex] = {
+      exchange: exchange,
+      order: orderType,
+      recvnu: recvNu,
+      xUs: xUs
+    }
+    redisClient.hset(`${logFilePath}_exchange_timing_output`, latestTime + '-' + sumindex, JSON.stringify(summaryStats[sumindex]));
+    sumindex++;
+  }
 
 }
 
