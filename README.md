@@ -9,3 +9,15 @@ Acts as the back-end to the user-front also serving the user ejs. It also connec
 
 ## index.js
 Contains all the front-end logic for rquesting data, processing, and displaying it.
+
+## Requirements
+* Redis
+* Node
+
+## Install
+``` npm install ```
+then
+``` node webserver.js``` on the log generating machine
+``` server.js ``` + Redis instance on the back-end infrastructure
+
+by default if running locally access the website through ```http://localhost:3000```
