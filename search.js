@@ -35,8 +35,6 @@ app.get('/logs', async (req, res) => {
     res.status(400).json({ error: 'Invalid searchBy parameter' });
     return;
   }
-  console.log(key);
-  console.log(query);
 
   
   const allresults = [];
@@ -104,8 +102,35 @@ app.get('/logFiles', (req, res) => {
       res.status(500).send('Internal Server Error');
     } else {
       const logFileNames = keys.map((key) => key.replace('_bytimestamp', ''));
-      console.log({logFileNames})
       res.json({ logFileNames }); // Send logFileNames as JSON
+    }
+  });
+});
+
+app.get('/graphData', (req, res) => {
+  const graphData = [];
+  
+  // Define the pattern to match the Redis keys
+  const keyPattern = '*_exchange_timing_output';
+
+  redisClient.keys(keyPattern, (err, keys) => {
+    if (err) {
+      console.error('Redis Error: ' + err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      // Iterate through the keys and retrieve data for each key
+      keys.forEach(key => {
+        console.log(key)
+        redisClient.hgetall(key, (err, data) => {
+          if (!err) {
+            graphData.push(data);
+          }
+          if (graphData.length === keys.length) {
+            // Send the retrieved data as JSON
+            res.json(graphData);
+          }
+        });
+      });
     }
   });
 });

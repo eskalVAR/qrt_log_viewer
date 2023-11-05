@@ -26,6 +26,7 @@
         }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
 <body>
@@ -63,6 +64,8 @@
         <br>
         <button type="button" onclick="queryLogs()">Save and Go</button>
     </form>
+    <canvas id="exchangeChart"></canvas>
+
     <table>
         <thead>
             <tr>
@@ -192,7 +195,6 @@
             });
 
 
-                console.log("Refresh")
                 Promise.all(requests)
                     .then(results => {
                         resultTableBody.innerHTML = '';
@@ -200,7 +202,6 @@
                             if (error) {
                                 resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
                             } else {
-                                console.log("Table update")
                                 resultTableBody.innerHTML += createTable(data, logFileName);
                             }
                         });
@@ -284,5 +285,102 @@
   }
 
     </script>
+    <script>
+        // Function to fetch and display the graph
+        function createGraph() {
+          // Fetch the data from the server
+          fetch('/graphData')
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json(); // Parse the response as JSON
+            })
+            .then((data) => {
+                console.log(data);
+              // Process the data to create datasets for Chart.js
+              const datasets = {};
+      
+              data.forEach((item) => {
+                const exchange = item.exchange;
+                const order = item.order;
+                if (!datasets[exchange]) {
+                  datasets[exchange] = {};
+                }
+                if (!datasets[exchange][order]) {
+                  datasets[exchange][order] = {
+                    recvnu: [],
+                    xUs: [],
+                    time: [],
+                  };
+                }
+                datasets[exchange][order].recvnu.push(item.recvnu);
+                datasets[exchange][order].xUs.push(item.xUs);
+                datasets[exchange][order].time.push(item.time);
+              });
+      
+              // Create a Chart.js chart
+              const canvas = document.getElementById('exchangeChart');
+              const ctx = canvas.getContext('2d');
+      
+              const chartData = {
+                labels: datasets[exchange][order].time,
+                datasets: Object.keys(datasets).map((exchange) => {
+                  return {
+                    label: exchange,
+                    borderColor: getRandomColor(),
+                    data: datasets[exchange][order].recvnu,
+                    fill: false,
+                  };
+                }),
+              };
+      
+              const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  x: {
+                    type: 'time',
+                    time: {
+                      parser: 'DD-MM-YYYY HH:mm:ss.SSSSSSSSS',
+                      unit: 'minute',
+                      displayFormats: {
+                        minute: 'HH:mm:ss',
+                      },
+                    },
+                    title: {
+                      display: true,
+                      text: 'Time',
+                    },
+                  },
+                  y: {
+                    title: {
+                      display: true,
+                      text: 'recvnu',
+                    },
+                  },
+                },
+              };
+      
+              new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: chartOptions,
+              });
+            })
+            .catch((error) => {
+              console.error('Error fetching data for the graph: ', error);
+            });
+        }
+      
+        // Generate a random color for each dataset line
+        function getRandomColor() {
+          return '#' + Math.floor(Math.random() * 16777215).toString(16);
+        }
+      
+        // Create the graph initially
+        createGraph();
+      </script>
+
 </body>
 </html>

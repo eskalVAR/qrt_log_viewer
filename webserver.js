@@ -49,10 +49,9 @@ function processSummaryStatsEntry(logEntry, logFilePath) {
           exchange : exchange,
           order : orderType,
           recvnu : recvNu,
-          xUs : xUs,
-          time: latestTime
+          xUs : xUs
         }
-        redisClient.zadd(`${logFilePath}_exchange_timing_output`, parseFloat(sumindex)  ,JSON.stringify(summaryStats[sumindex]));
+        redisClient.hset(`${logFilePath}_exchange_timing_output`, latestTime + '-' + sumindex  ,JSON.stringify(summaryStats[sumindex]));
         sumindex++;
       }
 
