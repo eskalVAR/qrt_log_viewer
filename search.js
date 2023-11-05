@@ -36,7 +36,7 @@ app.get('/logs', async (req, res) => {
     return;
   }
 
-  
+
   const allresults = [];
 
   function scan(key, query, cursor = '0') {
@@ -45,8 +45,8 @@ app.get('/logs', async (req, res) => {
         const [nextCursor, results] = await redisClient.hscan(key, cursor, 'MATCH', query, 'COUNT', '100');
 
         const filteredResults = results.filter((_, index) => index % 2 === deli);
-      allresults.push(...filteredResults);
-  
+        allresults.push(...filteredResults);
+
         if (nextCursor === '0') {
           resolve(allresults);
         } else {
@@ -58,16 +58,16 @@ app.get('/logs', async (req, res) => {
       }
     });
   }
-  
+
   scan(key, query)
     .then(results => {
-        for(var i = 0; i < results.length; i++){
-            results.splice(i+1,2);
-        }
+      for (var i = 0; i < results.length; i++) {
+        results.splice(i + 1, 2);
+      }
       res.json(results);
     })
     .catch(error => {
-        console.log(error);
+      console.log(error);
       res.status(500).json({ error: 'An error occurred' });
     });
 });
@@ -77,21 +77,31 @@ app.listen(port, () => {
 });
 
 app.get('/', (req, res) => {
-  redisClient.keys('*_bytimestamp', (err, keys) => {
-      if (err) {
+  var graphKeys;
+  redisClient.keys('*_exchange_timing_output', (err, keys) => {
+    if (err) {
+      console.error('Redis Error: ' + err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      graphKeys = keys.map((key) => key.replace('_exchange_timing_output', ''));
+      redisClient.keys('*_bytimestamp', (err, keys) => {
+        if (err) {
           console.error('Redis Error: ' + err);
           res.status(500).send('Internal Server Error');
-      } else {
+        } else {
           const logFileNames = keys.map((key) => key.replace('_bytimestamp', ''));
-          ejs.renderFile(__dirname + '/src/static/index.ejs', { logFileNames }, (err, html) => {
-              if (err) {
-                  console.error('EJS Error: ' + err);
-                  res.status(500).send('Internal Server Error');
-              } else {
-                  res.send(html);
-              }
+          ejs.renderFile(__dirname + '/src/static/index.ejs', { logFileNames, graphKeys }, (err, html) => {
+            if (err) {
+              console.error('EJS Error: ' + err);
+              res.status(500).send('Internal Server Error');
+            } else {
+              res.send(html);
+            }
           });
-      }
+        }
+      });
+
+    }
   });
 });
 
@@ -106,12 +116,23 @@ app.get('/logFiles', (req, res) => {
     }
   });
 });
+app.get('/graphkeys', (req, res) => {
+  redisClient.keys('*_exchange_timing_output', (err, keys) => {
+    if (err) {
+      console.error('Redis Error: ' + err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      const graphKeys = keys.map((key) => key.replace('_exchange_timing_output', ''));
+      res.json({ graphKeys }); // Send logFileNames as JSON
+    }
+  });
+});
 
 app.get('/graphData', (req, res) => {
   const graphData = [];
-  
+
   // Define the pattern to match the Redis keys
-  const keyPattern = 'logs/qrt_data_extraction_analysis_05-11-2023_000732.log_exchange_timing_output';
+  const keyPattern = req.query.graphKey;
 
   redisClient.keys(keyPattern, (err, keys) => {
     if (err) {
@@ -120,7 +141,6 @@ app.get('/graphData', (req, res) => {
     } else {
       // Iterate through the keys and retrieve data for each key
       keys.forEach(key => {
-        console.log(key)
         redisClient.hgetall(key, (err, data) => {
 
           if (!err) {

@@ -42,6 +42,22 @@
 <body>
   <h1>Log Query</h1>
   <form>
+    <label for="graphKey">Select Graph Key:</label>
+    <select name="graphKey" id="graphKey">
+      <% for (let i=0; i < graphKeys.length; i++) { %>
+        <option value="<%= graphKeys[i] %>">
+          <%= graphKeys[i] %>
+        </option>
+        <% } %>
+    </select>
+    <!-- Add an event listener for the change event -->
+    <script>
+      document.getElementById('graphKey').addEventListener('change', function () {
+        // Call the function to update the graph based on the selected graphKey
+        createGraph();
+      });
+    </script>
+    <br>
     <label>Select Log Files:</label>
     <div id="logFilesContainer">
       <% for (let i=0; i < logFileNames.length; i++) { %>
@@ -153,7 +169,51 @@
     const updateInterval = 5000; // 5 seconds
     setInterval(updateLogFiles, updateInterval);
   </script>
+  <script>
+    // Function to fetch and update graph keys
+    function updateGraphKeys() {
+      // Make an AJAX GET request to the server to fetch the available graph keys
+      fetch('/graphkeys')
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json(); // Parse the response as JSON
+        })
+        .then((data) => {
+          const graphKeySelect = document.getElementById('graphKey');
+          const selectedGraphKey = graphKeySelect.value; // Store the currently selected graph key
 
+          // Clear the existing dropdown options
+          graphKeySelect.innerHTML = '';
+
+          data.graphKeys.forEach(function (graphKey) {
+            const option = document.createElement('option');
+            option.value = graphKey;
+            option.textContent = graphKey;
+
+            // Restore the selected graph key if it exists in the new options
+            if (selectedGraphKey === graphKey) {
+              option.selected = true;
+            }
+
+            graphKeySelect.appendChild(option);
+          });
+        })
+        .catch((error) => {
+          console.error('Error fetching graph keys: ', error);
+        });
+    }
+
+    // Update graph keys initially and then periodically every X milliseconds
+    updateGraphKeys(); // Initial update
+
+    // Periodically update graph keys every 5 seconds (you can adjust the interval)
+    const updateGraphInterval = 5000; // 5 seconds
+    setInterval(updateGraphKeys, updateGraphInterval);
+
+
+  </script>
   <script>
     let continuousRefreshInterval;
 
@@ -300,10 +360,17 @@
   </script>
   <script>
     // Function to fetch and display the graph
-    function createGraph() {
-      // Fetch the data from the server
-      timelabels = []
-      fetch('/graphData')
+    let recvnuChartInstance;
+    let xUsChartInstance;
+    createGraph();
+    function createGraph(selectedGraphKey) {
+      // Fetch the data from the server based on the selected graphKey
+      const graphKey = selectedGraphKey || document.getElementById('graphKey').value; // Use the selectedGraphKey if provided
+      console.log("create graph")
+      timelabels = [];
+
+      // Include the selected graphKey in the fetch query
+      fetch(`/graphData?graphKey=${graphKey}_exchange_timing_output`)
         .then((response) => {
           if (!response.ok) {
             throw new Error('Network response was not ok');
@@ -311,6 +378,9 @@
           return response.json(); // Parse the response as JSON
         })
         .then((data) => {
+
+
+          // Fetch the data from the server
           let doneobject = []
           for (const [key, value] of Object.entries(data)) {
             let timedatekeyparts = key.split('-')
@@ -327,79 +397,88 @@
           for (const [key, value] of Object.entries(doneobject[0])) {
             timelabels.push(key);
           }
-             // Create arrays to store data for charts
-    let recvnuData = {};
-    let xUsData = {};
+          // Create arrays to store data for charts
+          let recvnuData = {};
+          let xUsData = {};
 
-    // Iterate through doneobject to organize data
-    doneobject.forEach((exchangeData, index) => {
-      for (const timedate in exchangeData) {
-        for (const item of exchangeData[timedate]) {
-          const exchange = item.exchange;
-          const order = item.order;
-          const recvnu = parseFloat(item.recvnu);
-          const xUs = parseFloat(item.xUs);
+          // Iterate through doneobject to organize data
+          doneobject.forEach((exchangeData, index) => {
+            for (const timedate in exchangeData) {
+              for (const item of exchangeData[timedate]) {
+                const exchange = item.exchange;
+                const order = item.order;
+                const recvnu = parseFloat(item.recvnu);
+                const xUs = parseFloat(item.xUs);
 
-          // Create labels if they don't exist
-          if (!recvnuData[exchange]) {
-            recvnuData[exchange] = {};
-          }
-          if (!recvnuData[exchange][order]) {
-            recvnuData[exchange][order] = [];
-          }
-          if (!xUsData[exchange]) {
-            xUsData[exchange] = {};
-          }
-          if (!xUsData[exchange][order]) {
-            xUsData[exchange][order] = [];
-          }
+                // Create labels if they don't exist
+                if (!recvnuData[exchange]) {
+                  recvnuData[exchange] = {};
+                }
+                if (!recvnuData[exchange][order]) {
+                  recvnuData[exchange][order] = [];
+                }
+                if (!xUsData[exchange]) {
+                  xUsData[exchange] = {};
+                }
+                if (!xUsData[exchange][order]) {
+                  xUsData[exchange][order] = [];
+                }
 
-          // Push data to the appropriate arrays
-          recvnuData[exchange][order].push(recvnu);
-          xUsData[exchange][order].push(xUs);
-        }
-      }
-    });
-
-    // Create separate charts for recvnu and xUs
-    const recvnuChartCanvas = document.getElementById('recvnuChart').getContext('2d');
-    const xUsChartCanvas = document.getElementById('xUsChart').getContext('2d');
-
-    // Function to create a chart
-    const createChart = (ctx, data, title) => {
-      const labels = timelabels;
-
-      const datasets = [];
-      for (const exchange in data) {
-        for (const order in data[exchange]) {
-          datasets.push({
-            label: `${exchange}-${order}`,
-            data: data[exchange][order],
-            borderColor: getRandomColor(), // Define a function to generate random colors
+                // Push data to the appropriate arrays
+                recvnuData[exchange][order].push(recvnu);
+                xUsData[exchange][order].push(xUs);
+              }
+            }
           });
-        }
-      }
+          if (recvnuChartInstance) {
+            recvnuChartInstance.destroy();
+          }
+          if (xUsChartInstance) {
+            xUsChartInstance.destroy();
+          }
+          // Create separate charts for recvnu and xUs
+          const recvnuChartCanvas = document.getElementById('recvnuChart').getContext('2d');
+          const xUsChartCanvas = document.getElementById('xUsChart').getContext('2d');
 
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: datasets,
-        },
-        options: {
-          title: {
-            display: true,
-            text: title,
-          },
-        },
-      });
-    };
+          // Function to create a chart
+          const createChart = (ctx, data, title) => {
+            const labels = timelabels;
 
-    // Create charts for recvnu and xUs
-    createChart(recvnuChartCanvas, recvnuData, 'Recvnu Chart');
-    createChart(xUsChartCanvas, xUsData, 'xUs Chart');
-  });
+            const datasets = [];
+            for (const exchange in data) {
+              for (const order in data[exchange]) {
+                datasets.push({
+                  label: `${exchange}-${order}`,
+                  data: data[exchange][order],
+                  borderColor: getRandomColor(), // Define a function to generate random colors
+                });
+              }
+            }
+
+            // Create the chart and store the chart instance
+            const chartInstance = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: datasets,
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: title,
+                },
+              },
+            });
+
+            return chartInstance; // Return the chart instance
+          };
+
+          // Create charts for recvnu and xUs and store their instances
+          recvnuChartInstance = createChart(recvnuChartCanvas, recvnuData, 'Recvnu Chart');
+          xUsChartInstance = createChart(xUsChartCanvas, xUsData, 'xUs Chart');
+        });
     }
+
     // Generate a random color for each dataset line
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
