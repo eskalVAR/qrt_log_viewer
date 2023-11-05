@@ -160,6 +160,7 @@
                 return;
             }
 
+            const refreshResults = () => {
             const requests = Array.from(logFileCheckboxes).map(checkbox => {
                 const logFileName = checkbox.value;
                 let query = '/logs?';
@@ -190,7 +191,8 @@
                     });
             });
 
-            const refreshResults = () => {
+
+                console.log("Refresh")
                 Promise.all(requests)
                     .then(results => {
                         resultTableBody.innerHTML = '';
@@ -198,6 +200,7 @@
                             if (error) {
                                 resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
                             } else {
+                                console.log("Table update")
                                 resultTableBody.innerHTML += createTable(data, logFileName);
                             }
                         });
