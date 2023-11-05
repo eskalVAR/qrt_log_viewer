@@ -1,386 +1,414 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Log Query</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        input, button, select {
-            margin: 10px;
-        }
-        #result {
-            margin-top: 20px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 80%;
-        }
-        th, td {
-            border: 1px solid #dddddd;
-            text-align: left;
-            padding: 8px;
-        }
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-    </style>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Log Query</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    input,
+    button,
+    select {
+      margin: 10px;
+    }
+
+    #result {
+      margin-top: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 80%;
+    }
+
+    th,
+    td {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
-<body>
-    <h1>Log Query</h1>
-    <form>
-        <label>Select Log Files:</label>
-        <div id="logFilesContainer">
-            <% for (let i = 0; i < logFileNames.length; i++) { %>
-                <input type="checkbox" name="logFile" value="<%= logFileNames[i] %>">
-                <label for="logFile"><%= logFileNames[i] %></label><br>
-            <% } %>
-        </div>
-        <label for="logLevel">Log Level:</label>
-        <input type="text" name="logLevel" id="logLevel" placeholder="Log Level">
-        <br>
-        <label for="message">Message:</label>
-        <input type="text" name="message" id="message" placeholder="Message">
-        <br>
-        <label for="timestamp">Timestamp:</label>
-        <input type="text" name="timestamp" id="timestamp" placeholder="Timestamp">
-        <br>
-        <label for="searchBy">Search By:</label>
-        <select name="searchBy" id="searchBy">
-            <option value="bymessage">By Message</option>
-            <option value="bylevel">By Level</option>
-            <option value="bytimestamp">By Timestamp</option>
-        </select>
-        <br>
-        <label for="continuousRefresh">Continuous Refresh:</label>
-        <input type="checkbox" name="continuousRefresh" id="continuousRefresh">
-        <br>
-        <label for="updateInterval">Update Interval (in seconds):</label>
-        <input type="range" name="updateInterval" id="updateInterval" min="1" max="60" step="1" value="5">
-        <output for="updateInterval">5 seconds</output>
-        <br>
-        <button type="button" onclick="queryLogs()">Save and Go</button>
-    </form>
-    <canvas id="exchangeChart"></canvas>
 
-    <table>
-        <thead>
-            <tr>
-                <th data-sortable="0">Log</th>
-                <th data-sortable="1">Timestamp</th>
-                <th data-sortable="2">Log Level</th>
-                <th data-sortable="3">Message</th>
-            </tr>
-        </thead>
-        <tbody id="result">
-            <!-- This section will be populated with query results -->
-        </tbody>
-    </table>
-        
+<body>
+  <h1>Log Query</h1>
+  <form>
+    <label>Select Log Files:</label>
     <div id="logFilesContainer">
-        <!-- Log files will be dynamically updated here -->
+      <% for (let i=0; i < logFileNames.length; i++) { %>
+        <input type="checkbox" name="logFile" value="<%= logFileNames[i] %>">
+        <label for="logFile">
+          <%= logFileNames[i] %>
+        </label><br>
+        <% } %>
     </div>
-    
-    <script>
-        // Function to fetch and update log files
-        function updateLogFiles() {
-          // Make an AJAX GET request to the server to fetch the updated logFileNames
-          fetch('/logFiles')
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
-              }
-              return response.json(); // Parse the response as JSON
-            })
+    <label for="logLevel">Log Level:</label>
+    <input type="text" name="logLevel" id="logLevel" placeholder="Log Level">
+    <br>
+    <label for="message">Message:</label>
+    <input type="text" name="message" id="message" placeholder="Message">
+    <br>
+    <label for="timestamp">Timestamp:</label>
+    <input type="text" name="timestamp" id="timestamp" placeholder="Timestamp">
+    <br>
+    <label for="searchBy">Search By:</label>
+    <select name="searchBy" id="searchBy">
+      <option value="bymessage">By Message</option>
+      <option value="bylevel">By Level</option>
+      <option value="bytimestamp">By Timestamp</option>
+    </select>
+    <br>
+    <label for="continuousRefresh">Continuous Refresh:</label>
+    <input type="checkbox" name="continuousRefresh" id="continuousRefresh">
+    <br>
+    <label for="updateInterval">Update Interval (in seconds):</label>
+    <input type="range" name="updateInterval" id="updateInterval" min="1" max="60" step="1" value="5">
+    <output for="updateInterval">5 seconds</output>
+    <br>
+    <button type="button" onclick="queryLogs()">Save and Go</button>
+  </form>
+  <canvas id="recvnuChart"></canvas>
+  <canvas id="xUsChart"></canvas>
+
+  <table>
+    <thead>
+      <tr>
+        <th data-sortable="0">Log</th>
+        <th data-sortable="1">Timestamp</th>
+        <th data-sortable="2">Log Level</th>
+        <th data-sortable="3">Message</th>
+      </tr>
+    </thead>
+    <tbody id="result">
+      <!-- This section will be populated with query results -->
+    </tbody>
+  </table>
+
+  <div id="logFilesContainer">
+    <!-- Log files will be dynamically updated here -->
+  </div>
+
+  <script>
+    // Function to fetch and update log files
+    function updateLogFiles() {
+      // Make an AJAX GET request to the server to fetch the updated logFileNames
+      fetch('/logFiles')
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json(); // Parse the response as JSON
+        })
+        .then((data) => {
+          const logFilesContainer = document.getElementById('logFilesContainer');
+          const existingCheckboxes = logFilesContainer.querySelectorAll('input[type="checkbox"]');
+
+          // Create a map of existing checkbox states
+          const checkboxStates = new Map();
+          existingCheckboxes.forEach((checkbox) => {
+            checkboxStates.set(checkbox.value, checkbox.checked);
+          });
+
+          // Clear the existing content
+          logFilesContainer.innerHTML = '';
+
+          data.logFileNames.forEach(function (logFileName) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'logFile';
+            checkbox.value = logFileName;
+
+            const label = document.createElement('label');
+            label.htmlFor = 'logFile';
+            label.textContent = logFileName;
+
+            // Restore the checkbox state if it exists in the map
+            if (checkboxStates.has(logFileName)) {
+              checkbox.checked = checkboxStates.get(logFileName);
+            }
+
+            logFilesContainer.appendChild(checkbox);
+            logFilesContainer.appendChild(label);
+            logFilesContainer.appendChild(document.createElement('br'));
+          });
+        })
+        .catch((error) => {
+          console.error('Error fetching log files: ', error);
+        });
+    }
+
+    // Update log files initially and then periodically every X milliseconds
+    updateLogFiles(); // Initial update
+
+    // Periodically update log files every 5 seconds (you can adjust the interval)
+    const updateInterval = 5000; // 5 seconds
+    setInterval(updateLogFiles, updateInterval);
+  </script>
+
+  <script>
+    let continuousRefreshInterval;
+
+    function queryLogs() {
+      clearInterval(continuousRefreshInterval);
+
+      const logFileCheckboxes = document.querySelectorAll('input[name="logFile"]:checked');
+      const logLevel = document.getElementById('logLevel').value;
+      const message = document.getElementById('message').value;
+      const timestamp = document.getElementById('timestamp').value;
+      const searchBy = document.getElementById('searchBy').value;
+      const continuousRefreshCheckbox = document.getElementById('continuousRefresh');
+      const updateInterval = document.getElementById('updateInterval').value;
+      const updateIntervalOutput = document.querySelector('output[for="updateInterval"]');
+      updateIntervalOutput.textContent = `${updateInterval} seconds`;
+      const resultTableBody = document.getElementById('result');
+
+      if (logFileCheckboxes.length === 0) {
+        resultTableBody.innerHTML = 'Please select at least one Log File';
+        return;
+      }
+
+      const refreshResults = () => {
+        const requests = Array.from(logFileCheckboxes).map(checkbox => {
+          const logFileName = checkbox.value;
+          let query = '/logs?';
+
+          query += `logFileName=${logFileName}`;
+
+          if (logLevel) {
+            query += `&logLevel=${logLevel}`;
+          }
+
+          if (message) {
+            query += `&message=${message}`;
+          }
+
+          if (timestamp) {
+            query += `&timestamp=${timestamp}`;
+          }
+
+          query += `&searchBy=${searchBy}`;
+
+          return fetch(query)
+            .then((response) => response.json())
             .then((data) => {
-              const logFilesContainer = document.getElementById('logFilesContainer');
-              const existingCheckboxes = logFilesContainer.querySelectorAll('input[type="checkbox"]');
-      
-              // Create a map of existing checkbox states
-              const checkboxStates = new Map();
-              existingCheckboxes.forEach((checkbox) => {
-                checkboxStates.set(checkbox.value, checkbox.checked);
-              });
-      
-              // Clear the existing content
-              logFilesContainer.innerHTML = '';
-      
-              data.logFileNames.forEach(function (logFileName) {
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'logFile';
-                checkbox.value = logFileName;
-      
-                const label = document.createElement('label');
-                label.htmlFor = 'logFile';
-                label.textContent = logFileName;
-      
-                // Restore the checkbox state if it exists in the map
-                if (checkboxStates.has(logFileName)) {
-                  checkbox.checked = checkboxStates.get(logFileName);
-                }
-      
-                logFilesContainer.appendChild(checkbox);
-                logFilesContainer.appendChild(label);
-                logFilesContainer.appendChild(document.createElement('br'));
-              });
+              return { logFileName, data };
             })
             .catch((error) => {
-              console.error('Error fetching log files: ', error);
+              return { logFileName, error: 'Error: ' + error };
             });
-        }
-      
-        // Update log files initially and then periodically every X milliseconds
-        updateLogFiles(); // Initial update
-      
-        // Periodically update log files every 5 seconds (you can adjust the interval)
-        const updateInterval = 5000; // 5 seconds
-        setInterval(updateLogFiles, updateInterval);
-      </script>
-
-    <script>
-        let continuousRefreshInterval;
-
-        function queryLogs() {
-            clearInterval(continuousRefreshInterval);
-
-            const logFileCheckboxes = document.querySelectorAll('input[name="logFile"]:checked');
-            const logLevel = document.getElementById('logLevel').value;
-            const message = document.getElementById('message').value;
-            const timestamp = document.getElementById('timestamp').value;
-            const searchBy = document.getElementById('searchBy').value;
-            const continuousRefreshCheckbox = document.getElementById('continuousRefresh');
-            const updateInterval = document.getElementById('updateInterval').value;
-            const updateIntervalOutput = document.querySelector('output[for="updateInterval"]');
-            updateIntervalOutput.textContent = `${updateInterval} seconds`;
-            const resultTableBody = document.getElementById('result');
-
-            if (logFileCheckboxes.length === 0) {
-                resultTableBody.innerHTML = 'Please select at least one Log File';
-                return;
-            }
-
-            const refreshResults = () => {
-            const requests = Array.from(logFileCheckboxes).map(checkbox => {
-                const logFileName = checkbox.value;
-                let query = '/logs?';
-
-                query += `logFileName=${logFileName}`;
-
-                if (logLevel) {
-                    query += `&logLevel=${logLevel}`;
-                }
-
-                if (message) {
-                    query += `&message=${message}`;
-                }
-
-                if (timestamp) {
-                    query += `&timestamp=${timestamp}`;
-                }
-
-                query += `&searchBy=${searchBy}`;
-
-                return fetch(query)
-                    .then((response) => response.json())
-                    .then((data) => {
-                        return { logFileName, data };
-                    })
-                    .catch((error) => {
-                        return { logFileName, error: 'Error: ' + error };
-                    });
-            });
-
-
-                Promise.all(requests)
-                    .then(results => {
-                        resultTableBody.innerHTML = '';
-                        results.forEach(({ logFileName, data, error }) => {
-                            if (error) {
-                                resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
-                            } else {
-                                resultTableBody.innerHTML += createTable(data, logFileName);
-                            }
-                        });
-                    });
-            };
-
-            refreshResults();
-
-            if (continuousRefreshCheckbox.checked) {
-                continuousRefreshInterval = setInterval(refreshResults, updateInterval * 1000); // Convert seconds to milliseconds
-            }
-        }
-
-        const updateIntervalSlider = document.getElementById('updateInterval');
-        const updateIntervalOutput = document.querySelector('output[for="updateInterval"]');
-
-        updateIntervalSlider.addEventListener('input', () => {
-            updateIntervalOutput.textContent = `${updateIntervalSlider.value} seconds`;
         });
 
-        function createTable(data, logFileName) {
-  let tableHtml = '';
-  const searchBy = document.getElementById('searchBy').value;
-  var parts;
-  const defaultSortColumn = 'timestamp'; // Change this to the default column you want to sort by
 
-  for (const key in data) {
-    parts = data[key].split(' ');
-    if (parts.length >= 3) {
-      const timestamp = parts[0] + ' ' + parts[1];
-      const logLevel = parts[2].slice(0, -1);
-      const message = parts.slice(3).join(' ');
-
-      tableHtml += '<tr>';
-      tableHtml += `<td>${logFileName}</td>`;
-      tableHtml += `<td>${timestamp}</td>`;
-      tableHtml += `<td>${logLevel}</td>`;
-      tableHtml += `<td>${message}</td>`;
-      tableHtml += '</tr>';
-    }
-  }
-  return tableHtml;
-}
-
-          // Store the current sort direction for each column
-  const sortDirections = {
-    timestamp: 'asc',
-    logLevel: 'asc',
-    message: 'asc',
-  };
-
-  // Add event listeners to the table headers for sorting
-  const tableHeaders = document.querySelectorAll('th[data-sortable]');
-  tableHeaders.forEach((header) => {
-    header.addEventListener('click', () => {
-      const column = header.getAttribute('data-sortable');
-      sortTable(column);
-    });
-  });
-
-  function sortTable(column) {
-    const tbody = document.getElementById('result');
-    const rows = Array.from(tbody.rows);
-
-    rows.sort((rowA, rowB) => {
-      const cellA = rowA.cells[column].textContent;
-      const cellB = rowB.cells[column].textContent;
-      return sortDirections[column] === 'asc'
-        ? cellA.localeCompare(cellB)
-        : cellB.localeCompare(cellA);
-    });
-
-    // Reverse sort direction for the clicked column
-    sortDirections[column] = sortDirections[column] === 'asc' ? 'desc' : 'asc';
-
-    // Clear the table body and append sorted rows
-    tbody.innerHTML = '';
-    rows.forEach((row) => {
-      tbody.appendChild(row);
-    });
-  }
-
-    </script>
-    <script>
-        // Function to fetch and display the graph
-        function createGraph() {
-          // Fetch the data from the server
-          fetch('/graphData')
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
+        Promise.all(requests)
+          .then(results => {
+            resultTableBody.innerHTML = '';
+            results.forEach(({ logFileName, data, error }) => {
+              if (error) {
+                resultTableBody.innerHTML += `<tr><td>${logFileName}</td><td colspan="3">${error}</td></tr>`;
+              } else {
+                resultTableBody.innerHTML += createTable(data, logFileName);
               }
-              return response.json(); // Parse the response as JSON
-            })
-            .then((data) => {
-                console.log(data);
-              // Process the data to create datasets for Chart.js
-              const datasets = {};
-      
-              data.forEach((item) => {
-                const exchange = item.exchange;
-                const order = item.order;
-                if (!datasets[exchange]) {
-                  datasets[exchange] = {};
-                }
-                if (!datasets[exchange][order]) {
-                  datasets[exchange][order] = {
-                    recvnu: [],
-                    xUs: [],
-                    time: [],
-                  };
-                }
-                datasets[exchange][order].recvnu.push(item.recvnu);
-                datasets[exchange][order].xUs.push(item.xUs);
-                datasets[exchange][order].time.push(item.time);
-              });
-      
-              // Create a Chart.js chart
-              const canvas = document.getElementById('exchangeChart');
-              const ctx = canvas.getContext('2d');
-      
-              const chartData = {
-                labels: datasets[exchange][order].time,
-                datasets: Object.keys(datasets).map((exchange) => {
-                  return {
-                    label: exchange,
-                    borderColor: getRandomColor(),
-                    data: datasets[exchange][order].recvnu,
-                    fill: false,
-                  };
-                }),
-              };
-      
-              const chartOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  x: {
-                    type: 'time',
-                    time: {
-                      parser: 'DD-MM-YYYY HH:mm:ss.SSSSSSSSS',
-                      unit: 'minute',
-                      displayFormats: {
-                        minute: 'HH:mm:ss',
-                      },
-                    },
-                    title: {
-                      display: true,
-                      text: 'Time',
-                    },
-                  },
-                  y: {
-                    title: {
-                      display: true,
-                      text: 'recvnu',
-                    },
-                  },
-                },
-              };
-      
-              new Chart(ctx, {
-                type: 'line',
-                data: chartData,
-                options: chartOptions,
-              });
-            })
-            .catch((error) => {
-              console.error('Error fetching data for the graph: ', error);
             });
+          });
+      };
+
+      refreshResults();
+
+      if (continuousRefreshCheckbox.checked) {
+        continuousRefreshInterval = setInterval(refreshResults, updateInterval * 1000); // Convert seconds to milliseconds
+      }
+    }
+
+    const updateIntervalSlider = document.getElementById('updateInterval');
+    const updateIntervalOutput = document.querySelector('output[for="updateInterval"]');
+
+    updateIntervalSlider.addEventListener('input', () => {
+      updateIntervalOutput.textContent = `${updateIntervalSlider.value} seconds`;
+    });
+
+    function createTable(data, logFileName) {
+      let tableHtml = '';
+      const searchBy = document.getElementById('searchBy').value;
+      var parts;
+      const defaultSortColumn = 'timestamp'; // Change this to the default column you want to sort by
+
+      for (const key in data) {
+        parts = data[key].split(' ');
+        if (parts.length >= 3) {
+          const timestamp = parts[0] + ' ' + parts[1];
+          const logLevel = parts[2].slice(0, -1);
+          const message = parts.slice(3).join(' ');
+
+          tableHtml += '<tr>';
+          tableHtml += `<td>${logFileName}</td>`;
+          tableHtml += `<td>${timestamp}</td>`;
+          tableHtml += `<td>${logLevel}</td>`;
+          tableHtml += `<td>${message}</td>`;
+          tableHtml += '</tr>';
         }
-      
-        // Generate a random color for each dataset line
-        function getRandomColor() {
-          return '#' + Math.floor(Math.random() * 16777215).toString(16);
+      }
+      return tableHtml;
+    }
+
+    // Store the current sort direction for each column
+    const sortDirections = {
+      timestamp: 'asc',
+      logLevel: 'asc',
+      message: 'asc',
+    };
+
+    // Add event listeners to the table headers for sorting
+    const tableHeaders = document.querySelectorAll('th[data-sortable]');
+    tableHeaders.forEach((header) => {
+      header.addEventListener('click', () => {
+        const column = header.getAttribute('data-sortable');
+        sortTable(column);
+      });
+    });
+
+    function sortTable(column) {
+      const tbody = document.getElementById('result');
+      const rows = Array.from(tbody.rows);
+
+      rows.sort((rowA, rowB) => {
+        const cellA = rowA.cells[column].textContent;
+        const cellB = rowB.cells[column].textContent;
+        return sortDirections[column] === 'asc'
+          ? cellA.localeCompare(cellB)
+          : cellB.localeCompare(cellA);
+      });
+
+      // Reverse sort direction for the clicked column
+      sortDirections[column] = sortDirections[column] === 'asc' ? 'desc' : 'asc';
+
+      // Clear the table body and append sorted rows
+      tbody.innerHTML = '';
+      rows.forEach((row) => {
+        tbody.appendChild(row);
+      });
+    }
+
+  </script>
+  <script>
+    // Function to fetch and display the graph
+    function createGraph() {
+      // Fetch the data from the server
+      timelabels = []
+      fetch('/graphData')
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json(); // Parse the response as JSON
+        })
+        .then((data) => {
+          let doneobject = []
+          for (const [key, value] of Object.entries(data)) {
+            let timedatekeyparts = key.split('-')
+            let timedate = timedatekeyparts[0] + '-' + timedatekeyparts[1] + '-' + timedatekeyparts[2]
+            let index = timedatekeyparts[3]
+            if (doneobject[index] == undefined) {
+              doneobject[index] = [];
+            }
+            doneobject[index][timedate] = [];
+            doneobject[index][timedate].push(JSON.parse(value))
+
+          }
+          console.log(doneobject)
+          for (const [key, value] of Object.entries(doneobject[0])) {
+            timelabels.push(key);
+          }
+             // Create arrays to store data for charts
+    let recvnuData = {};
+    let xUsData = {};
+
+    // Iterate through doneobject to organize data
+    doneobject.forEach((exchangeData, index) => {
+      for (const timedate in exchangeData) {
+        for (const item of exchangeData[timedate]) {
+          const exchange = item.exchange;
+          const order = item.order;
+          const recvnu = parseFloat(item.recvnu);
+          const xUs = parseFloat(item.xUs);
+
+          // Create labels if they don't exist
+          if (!recvnuData[exchange]) {
+            recvnuData[exchange] = {};
+          }
+          if (!recvnuData[exchange][order]) {
+            recvnuData[exchange][order] = [];
+          }
+          if (!xUsData[exchange]) {
+            xUsData[exchange] = {};
+          }
+          if (!xUsData[exchange][order]) {
+            xUsData[exchange][order] = [];
+          }
+
+          // Push data to the appropriate arrays
+          recvnuData[exchange][order].push(recvnu);
+          xUsData[exchange][order].push(xUs);
         }
-      
-        // Create the graph initially
-        createGraph();
-      </script>
+      }
+    });
+
+    // Create separate charts for recvnu and xUs
+    const recvnuChartCanvas = document.getElementById('recvnuChart').getContext('2d');
+    const xUsChartCanvas = document.getElementById('xUsChart').getContext('2d');
+
+    // Function to create a chart
+    const createChart = (ctx, data, title) => {
+      const labels = timelabels;
+
+      const datasets = [];
+      for (const exchange in data) {
+        for (const order in data[exchange]) {
+          datasets.push({
+            label: `${exchange}-${order}`,
+            data: data[exchange][order],
+            borderColor: getRandomColor(), // Define a function to generate random colors
+          });
+        }
+      }
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets,
+        },
+        options: {
+          title: {
+            display: true,
+            text: title,
+          },
+        },
+      });
+    };
+
+    // Create charts for recvnu and xUs
+    createChart(recvnuChartCanvas, recvnuData, 'Recvnu Chart');
+    createChart(xUsChartCanvas, xUsData, 'xUs Chart');
+  });
+    }
+    // Generate a random color for each dataset line
+    function getRandomColor() {
+      return '#' + Math.floor(Math.random() * 16777215).toString(16);
+    }
+
+    // Create the graph initially
+    createGraph();
+  </script>
 
 </body>
+
 </html>

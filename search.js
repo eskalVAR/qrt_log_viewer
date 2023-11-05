@@ -111,7 +111,7 @@ app.get('/graphData', (req, res) => {
   const graphData = [];
   
   // Define the pattern to match the Redis keys
-  const keyPattern = '*_exchange_timing_output';
+  const keyPattern = 'logs/qrt_data_extraction_analysis_05-11-2023_000732.log_exchange_timing_output';
 
   redisClient.keys(keyPattern, (err, keys) => {
     if (err) {
@@ -122,12 +122,9 @@ app.get('/graphData', (req, res) => {
       keys.forEach(key => {
         console.log(key)
         redisClient.hgetall(key, (err, data) => {
+
           if (!err) {
-            graphData.push(data);
-          }
-          if (graphData.length === keys.length) {
-            // Send the retrieved data as JSON
-            res.json(graphData);
+            res.json(data)
           }
         });
       });
