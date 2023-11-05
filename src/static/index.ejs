@@ -61,15 +61,15 @@
         <input type="range" name="updateInterval" id="updateInterval" min="1" max="60" step="1" value="5">
         <output for="updateInterval">5 seconds</output>
         <br>
-        <button type="button" onclick="queryLogs()">Query</button>
+        <button type="button" onclick="queryLogs()">Save and Go</button>
     </form>
     <table>
         <thead>
             <tr>
-                <th>Log</th>
-                <th>Timestamp</th>
-                <th>Log Level</th>
-                <th>Message</th>
+                <th data-sortable="0">Log</th>
+                <th data-sortable="1">Timestamp</th>
+                <th data-sortable="2">Log Level</th>
+                <th data-sortable="3">Message</th>
             </tr>
         </thead>
         <tbody id="result">
@@ -222,27 +222,67 @@
         });
 
         function createTable(data, logFileName) {
-            let tableHtml = '';
-            const searchBy = document.getElementById('searchBy').value;
-            var parts;
+  let tableHtml = '';
+  const searchBy = document.getElementById('searchBy').value;
+  var parts;
+  const defaultSortColumn = 'timestamp'; // Change this to the default column you want to sort by
 
-            for (const key in data) {
-                parts = data[key].split(' ');
-                if (parts.length >= 3) {
-                    const timestamp = parts[0] + ' ' + parts[1];
-                    const logLevel = parts[2].slice(0, -1);
-                    const message = parts.slice(3).join(' ');
+  for (const key in data) {
+    parts = data[key].split(' ');
+    if (parts.length >= 3) {
+      const timestamp = parts[0] + ' ' + parts[1];
+      const logLevel = parts[2].slice(0, -1);
+      const message = parts.slice(3).join(' ');
 
-                    tableHtml += '<tr>';
-                    tableHtml += `<td>${logFileName}</td>`;
-                    tableHtml += `<td>${timestamp}</td>`;
-                    tableHtml += `<td>${logLevel}</td>`;
-                    tableHtml += `<td>${message}</td>`;
-                    tableHtml += '</tr>';
-                }
-            }
-            return tableHtml;
-        }
+      tableHtml += '<tr>';
+      tableHtml += `<td>${logFileName}</td>`;
+      tableHtml += `<td>${timestamp}</td>`;
+      tableHtml += `<td>${logLevel}</td>`;
+      tableHtml += `<td>${message}</td>`;
+      tableHtml += '</tr>';
+    }
+  }
+  return tableHtml;
+}
+
+          // Store the current sort direction for each column
+  const sortDirections = {
+    timestamp: 'asc',
+    logLevel: 'asc',
+    message: 'asc',
+  };
+
+  // Add event listeners to the table headers for sorting
+  const tableHeaders = document.querySelectorAll('th[data-sortable]');
+  tableHeaders.forEach((header) => {
+    header.addEventListener('click', () => {
+      const column = header.getAttribute('data-sortable');
+      sortTable(column);
+    });
+  });
+
+  function sortTable(column) {
+    const tbody = document.getElementById('result');
+    const rows = Array.from(tbody.rows);
+
+    rows.sort((rowA, rowB) => {
+      const cellA = rowA.cells[column].textContent;
+      const cellB = rowB.cells[column].textContent;
+      return sortDirections[column] === 'asc'
+        ? cellA.localeCompare(cellB)
+        : cellB.localeCompare(cellA);
+    });
+
+    // Reverse sort direction for the clicked column
+    sortDirections[column] = sortDirections[column] === 'asc' ? 'desc' : 'asc';
+
+    // Clear the table body and append sorted rows
+    tbody.innerHTML = '';
+    rows.forEach((row) => {
+      tbody.appendChild(row);
+    });
+  }
+
     </script>
 </body>
 </html>
